@@ -32,7 +32,24 @@ end
 class PRS
   attr_accessor :player, :computer
 
+  @@log = []
+  @@stats = { won: 0, tied: 0, lost: 0, total: 0 }
+  @@perc = { won: 0, tied: 0, lost: 0, total: 0 }
   OPTIONS = { "p" => "paper", "r" => "rock", "s" => "scissors" }
+
+  def show_stats
+    puts "\nStats:"
+    puts "Won: #{@@stats[:won]} game(s) (#{@@perc[:won]}%)".light_green
+    puts "Lost: #{@@stats[:lost]} game(s) (#{@@perc[:lost]}%)".light_red
+    puts "Tied: #{@@stats[:tied]} game(s) (#{@@perc[:tied]}%)".light_blue
+  end
+
+  def add_to_log
+    @@log << "#{player}#{computer}"
+    @@stats[result] += 1
+    @@stats[:total] += 1
+    @@stats.each { |k,v| @@perc[k] = v * 100 / @@stats[:total] }
+  end
 
   def initialize
     @player = Player.new
@@ -53,20 +70,34 @@ class PRS
       clear
       player.move
       computer.move
-      puts result
-      puts "\n=> Do you want to play again? (y/n)".light_black.bold
+      show_result
+      add_to_log
+      show_stats
+
+      puts "\n=> Do you want to play again? (y/n)".white.bold
     end while gets.chomp.downcase == "y"
   end
 
   def result
     case "#{player}#{computer}"
     when 'pr', 'rs', 'sp'
-      "*** YOU WON ***".light_green.bold
+      :won
     when 'ps', 'rp', 'sr'
-      "*** YOU LOST ***".light_red.bold
+      :lost
     else
-      "*** IT'S A TIE ***".light_green.bold
+      :tied
     end
+  end
+
+  def show_result
+    puts  case result
+          when :won
+            "*** YOU WON ***".light_green.bold
+          when :lost
+            "*** YOU LOST ***".light_red.bold
+          else
+            "*** IT'S A TIE ***".light_blue.bold
+          end
   end
 end
 
