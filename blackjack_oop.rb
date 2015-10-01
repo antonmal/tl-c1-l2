@@ -48,7 +48,7 @@ class Deck
   end
 
   def deal
-    self.cards.pop
+    cards.pop
   end
 end
 
