@@ -234,7 +234,7 @@ begin
   puts
   puts "=> #{player_name}, do you want to play again? (y/n)"
 
-end until gets.chomp.downcase != "y"
+end while gets.chomp.downcase == "y"
 
 
 
