@@ -106,20 +106,35 @@ class Dealer < Player
     @color = :yellow
   end
 
+  def with_cards_hidden
+    str =  ("+---+ " * hand.size + "\n").colorize(color)
+    hand.each_with_index do |card, index|
+      if index == 0
+        str += "|".colorize(color) + card.to_s + "| ".colorize(color)
+      else
+        str += "|".colorize(color) + "XXX".light_black + "| ".colorize(color)
+      end
+    end
+    str += "\n"
+    str += ("+---+ " * hand.size).colorize(color)
+  end
+
 end
 
 class Game
-  attr_accessor :deck, :player, :dealer
+  attr_accessor :deck, :player, :dealer, :finished
 
   def initialize(player_name)
     @deck = Deck.new
     @player = Player.new(deck, player_name)
     @dealer = Dealer.new(deck)
+    @finished = false
   end
 
   def play
     player_move
     dealer_move if !player.busted? && !player.blackjack?
+    self.finished = true
     puts self
     puts
     puts result
@@ -194,7 +209,7 @@ class Game
   def to_s
     clear_shell
     str = "Dealer's cards:\n"
-    str += "#{dealer}\n\n"
+    str += finished ? "#{dealer}\n\n" : "#{dealer.with_cards_hidden}\n\n"
     str += "#{player.name}'s cards:\n"
     str += "#{player}\n"
   end
