@@ -55,15 +55,14 @@ end
 class Player
   attr_accessor :hand, :name, :color
 
-  def initialize(deck, name)
+  def initialize(name)
     @hand = []
-    2.times { hit(deck) }
     @name = name.capitalize
     @color = :cyan
   end
 
   def hit(deck)
-    self.hand.push(deck.deal)
+    self.hand << deck.deal
   end
 
   def to_s
@@ -78,7 +77,7 @@ class Player
 
     # If the sum is greater than 21 (busted), re-calculate one or more aces as 1s
     if pts > 21
-      aces = hand.count { |card| card.suit == "A" }
+      aces = hand.count { |card| card.rank == "A" }
       aces.times do
         pts -= 10
         break if pts <= 21
@@ -88,20 +87,19 @@ class Player
   end
 
   def busted?
-    points > 21
+    self.points > 21
   end
 
   def blackjack?
-    points == 21
+    self.points == 21
   end
 
 end
 
 class Dealer < Player
 
-  def initialize(deck)
+  def initialize
     @hand = []
-    2.times { hit(deck) }
     @name = "Dealer"
     @color = :yellow
   end
@@ -122,19 +120,23 @@ class Dealer < Player
 end
 
 class Game
-  attr_accessor :deck, :player, :dealer, :finished
+  attr_accessor :deck, :player, :dealer, :show_dealer_cards
 
   def initialize(player_name)
     @deck = Deck.new
-    @player = Player.new(deck, player_name)
-    @dealer = Dealer.new(deck)
-    @finished = false
+    @player = Player.new(player_name)
+    @dealer = Dealer.new
+    2.times do
+      player.hit(deck)
+      dealer.hit(deck)
+    end
+    @show_dealer_cards = false
   end
 
   def play
     player_move
+    self.show_dealer_cards = true
     dealer_move if !player.busted? && !player.blackjack?
-    self.finished = true
     puts self
     puts
     puts result
@@ -145,9 +147,9 @@ class Game
       puts self
       puts
       puts "=> Do you want to (H)it or (S)tay?"
-      player_move = gets.chomp.downcase
-      player.hit(deck) if player_move == "h"
-      break if player_move == "s"
+      hit_or_stay = gets.chomp.downcase
+      player.hit(deck) if hit_or_stay == "h"
+      break if hit_or_stay == "s"
     end
   end
 
@@ -202,14 +204,14 @@ class Game
     end
   end
 
-  def clear_shell
+  def self.clear
     system('clear') || system('cls')
   end
 
   def to_s
-    clear_shell
+    Game.clear
     str = "Dealer's cards:\n"
-    str += finished ? "#{dealer}\n\n" : "#{dealer.with_cards_hidden}\n\n"
+    str += show_dealer_cards ? "#{dealer}\n\n" : "#{dealer.with_cards_hidden}\n\n"
     str += "#{player.name}'s cards:\n"
     str += "#{player}\n"
   end
@@ -218,7 +220,7 @@ end
 
 # Play the game
 
-system('clear') || system('cls')
+Game.clear
 puts "Welcome to BLACKJACK !"
 puts
 puts "=> What is your name?"
