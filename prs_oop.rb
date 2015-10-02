@@ -17,7 +17,6 @@ class Player
   def to_s
     self.the_move
   end
-
 end
 
 class Computer < Player
@@ -32,23 +31,27 @@ end
 class PRS
   attr_accessor :player, :computer
 
-  @@log = []
+  @@log = {}
   @@stats = { won: 0, tied: 0, lost: 0, total: 0 }
   @@perc = { won: 0, tied: 0, lost: 0, total: 0 }
   OPTIONS = { "p" => "paper", "r" => "rock", "s" => "scissors" }
 
+  def self.show_log
+    @@log.each {|time,log_item| puts "#{time} - #{log_item}"}
+  end
+
   def show_stats
     puts "\nStats:"
-    puts "Won: #{@@stats[:won]} game(s) (#{@@perc[:won]}%)".light_green
-    puts "Lost: #{@@stats[:lost]} game(s) (#{@@perc[:lost]}%)".light_red
-    puts "Tied: #{@@stats[:tied]} game(s) (#{@@perc[:tied]}%)".light_blue
+    puts "Won: #{@@stats[:won]} game(s) [#{@@perc[:won]}%]".light_green
+    puts "Lost: #{@@stats[:lost]} game(s) [#{@@perc[:lost]}%]".light_red
+    puts "Tied: #{@@stats[:tied]} game(s) [#{@@perc[:tied]}%]".light_blue
   end
 
   def add_to_log
-    @@log << "#{player}#{computer}"
+    @@log[Time.now] = "#{result.to_s.upcase}: #{OPTIONS[player.to_s].capitalize} vs. #{OPTIONS[computer.to_s].capitalize}"
     @@stats[result] += 1
     @@stats[:total] += 1
-    @@stats.each { |k,v| @@perc[k] = v * 100 / @@stats[:total] }
+    @@stats.each { |k,v| @@perc[k] = (v.to_f * 100 / @@stats[:total]).round(2) }
   end
 
   def initialize
@@ -76,6 +79,9 @@ class PRS
 
       puts "\n=> Do you want to play again? (y/n)".white.bold
     end while gets.chomp.downcase == "y"
+
+    clear
+    PRS.show_log
   end
 
   def result
