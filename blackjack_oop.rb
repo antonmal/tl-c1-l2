@@ -87,11 +87,11 @@ class Player
   end
 
   def busted?
-    self.points > 21
+    points > 21
   end
 
   def blackjack?
-    self.points == 21
+    points == 21
   end
 
 end
