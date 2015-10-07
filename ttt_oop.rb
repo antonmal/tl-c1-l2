@@ -13,9 +13,8 @@ class Player
   end
 
   def move(board)
-    puts
-    puts "=> Where do you want to move?"
-    puts "   (type row letter followed by the colums number (like 'B2')"
+    puts "\n=> Where do you want to move?"
+    puts "   (type row letter followed by the column number (like 'B2')"
     loop do
       the_move = gets.chomp.downcase
       if board.empty_cells.include? the_move
@@ -28,7 +27,8 @@ class Player
   end
 end
 
-class Computer < Player
+class Computer
+  attr_accessor :marker
 
   def initialize
     @marker = "O"
@@ -40,7 +40,7 @@ class Computer < Player
       board.hash[board.empty_cells.sample] = marker
 
     else # in 90% of cases use minimax AI
-      
+
       # More complex AI logic (Minimax algorythm)
       move_weights = {} # a hash of weights for each available move
 
@@ -108,7 +108,7 @@ class Board
   end
 
   def empty_cells
-    hash.select {|k,v| v == " "}.keys
+    hash.select {|_,v| v == " "}.keys
   end
 
   def to_s
@@ -163,11 +163,11 @@ class TTT
   def result
     case board.has_line?
     when "X"
-      "*** YOU WON ***".green.bold
+      " *** YOU WIN ***".green.bold
     when "O"
-      "*** YOU LOST ***".red.bold
+      " *** YOU LOSE ***".red.bold
     else
-      "*** IT'S A TIE ***".yellow.bold
+      " *** IT'S A TIE ***".yellow.bold
     end
   end
 

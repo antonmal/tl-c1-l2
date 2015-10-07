@@ -17,13 +17,13 @@ class Card
 
   def to_s
     %w(♥ ♦).include?(suit) ? color_suit = suit.red : color_suit = suit.blue
-    self.rank == '10' ? "#{rank}#{color_suit}" : "#{rank}#{color_suit} "
+    rank == '10' ? "#{rank}#{color_suit}" : "#{rank}#{color_suit} "
   end
 
   def rank_value
-    case self.rank
+    case rank
     when '1'..'10'
-      self.rank.to_i
+      rank.to_i
     when 'J', 'Q', 'K'
       10
     when 'A'
@@ -136,14 +136,14 @@ class Game
   def play
     player_move
     self.show_dealer_cards = true
-    dealer_move if !player.busted? && !player.blackjack?
+    dealer_move unless player.busted? || player.blackjack?
     puts self
     puts
     puts result
   end
 
   def player_move
-    while !player.busted? && !player.blackjack?
+    until player.busted? || player.blackjack?
       puts self
       puts
       puts "=> Do you want to (H)it or (S)tay?"
@@ -181,26 +181,26 @@ class Game
 
   def result
     case evaluate_state
-    when "player blackjack"
-      "*** #{player.name} WON ***  You have blackjack!".green
-    when "dealer blackjack"
-      "*** #{player.name} LOST ***  Dealer has blackjack!".red
-    when "player busted"
-      "*** #{player.name} LOST ***  Busted!".red
-    when "dealer busted"
-      "*** #{player.name} WON ***  Dealer busted!".green
-    when "player won"
-      "*** #{player.name} WON ***  You have more points!".green
-    when "dealer won"
-      "*** #{player.name} LOST ***  Dealer has more points!".red
-    when "tie blackjack"
-      "*** IT'S A TIE ***  Both have blackjack!".yellow
-    when "tie busted"
-      "*** IT'S A TIE ***  Both busted!".yellow
-    when "tie points"
-      "*** IT'S A TIE ***  You have equal number of points!".yellow
-    else
-      ""
+      when "player blackjack"
+        "*** #{player.name} WON ***  You have blackjack!".green
+      when "dealer blackjack"
+        "*** #{player.name} LOST ***  Dealer has blackjack!".red
+      when "player busted"
+        "*** #{player.name} LOST ***  Busted!".red
+      when "dealer busted"
+        "*** #{player.name} WON ***  Dealer busted!".green
+      when "player won"
+        "*** #{player.name} WON ***  You have more points!".green
+      when "dealer won"
+        "*** #{player.name} LOST ***  Dealer has more points!".red
+      when "tie blackjack"
+        "*** IT'S A TIE ***  Both have blackjack!".yellow
+      when "tie busted"
+        "*** IT'S A TIE ***  Both busted!".yellow
+      when "tie points"
+        "*** IT'S A TIE ***  You have equal number of points!".yellow
+      else
+        ""
     end
   end
 
