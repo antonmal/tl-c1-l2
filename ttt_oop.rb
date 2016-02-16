@@ -109,6 +109,28 @@ class Computer < Player
   end
 end
 
+class Square
+  attr_accessor :marker
+
+  EMPTY_MARKER = '.'.light_black
+
+  def initialize(marker = EMPTY_MARKER)
+    @marker = marker
+  end
+
+  def unmarked?
+    marker == EMPTY_MARKER
+  end
+
+  def marked?
+    marker != EMPTY_MARKER
+  end
+
+  def to_s
+    marker
+  end
+end
+
 # Creates, displays and tracks board state (markers in each square)
 class Board
   attr_accessor :squares
@@ -118,8 +140,8 @@ class Board
               %w(a1-b2-c3 c1-b2-a3) # diagonals
 
   def initialize(new_squares = {})
+    @squares = {}
     if new_squares == {}
-      @squares = {}
       reset
     else
       @squares = new_squares
@@ -127,11 +149,11 @@ class Board
   end
 
   def []=(square, marker)
-    @squares[square] = marker
+    @squares[square].marker = marker
   end
 
   def empty_squares
-    squares.select { |_, v| v == TTT::EMPTY_MARKER }.keys
+    squares.select { |_, square| square.unmarked? }.keys
   end
 
   # rubocop:disable Metrics/AbcSize, MethodLength
@@ -158,9 +180,10 @@ class Board
 
   def winning_marker
     WIN_LINES.each do |line|
-      line_values = squares.values_at(*line.split('-'))
-      next if line_values[0] == TTT::EMPTY_MARKER
-      return line_values[0] if line_values.all? { |v| v == line_values[0] }
+      line_squares = squares.values_at(*line.split('-'))
+      line_markers = line_squares.select(&:marked?).collect(&:marker)
+      next if line_markers.size < 3
+      return line_markers[0] if line_markers.all? { |v| v == line_markers[0] }
     end
     nil
   end
@@ -174,11 +197,11 @@ class Board
   end
 
   def squares_with(square, marker)
-    squares.merge square => marker
+    squares.merge square => Square.new(marker)
   end
 
   def reset
-    SQUARE_NAMES.each { |square| @squares[square] = TTT::EMPTY_MARKER }
+    SQUARE_NAMES.each { |square| @squares[square] = Square.new }
   end
 end
 
@@ -186,7 +209,6 @@ end
 class TTT
   attr_accessor :player, :computer, :board, :current_marker
 
-  EMPTY_MARKER = '.'.light_black
   HUMAN_MARKER = 'X'.green
   COMPUTER_MARKER = 'O'.red
   FIRST_TO_MOVE = HUMAN_MARKER
