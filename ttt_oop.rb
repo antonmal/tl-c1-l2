@@ -4,97 +4,110 @@ require 'colorize'
 # Tic-Tac-Toe OOP game for the Tealeaf Course C1-L2
 # (Anton Malkov)
 
-
+# Creates a player attached to a particular board and using a specified marker
 class Player
-  attr_accessor :marker
+  attr_accessor :marker, :board
 
-  def initialize(marker)
+  def initialize(marker, board)
     @marker = marker
+    @board = board
   end
+end
 
-  def move(board)
-    puts "\n=> Where do you want to move?"
-    puts "   (type row letter followed by the column number (like 'B2')"
+# Creates a human player and let's him choose moves in command line
+class Human < Player
+  def move
+    prompt_for_move
     loop do
       the_move = gets.chomp.downcase
       if board.empty_squares.include? the_move
         board[the_move] = marker
         break
       end
-      puts "\n=> Please, choose one of the following options:"
-      puts board.empty_squares.join(", ")
+      ask_to_choose_an_empty_square
     end
+  end
+
+  def prompt_for_move
+    puts "\n=> Where do you want to move?"
+    puts "   (type row letter followed by the column number (like 'B2')"
+  end
+
+  def ask_to_choose_an_empty_square
+    puts "\n=> Please, choose one of the following options:"
+    puts board.empty_squares.join(', ')
   end
 end
 
-class Computer
-  attr_accessor :marker
+# Creates a computer player and let's him choose a random move
+#   or smart move using the minimax algorythm
+class Computer < Player
   DUMB_MOVE_PROBABILITY = 10
 
-  def initialize(marker)
-    @marker = marker
-  end
-
-  def move(board)
+  def move
     if rand(100) <= DUMB_MOVE_PROBABILITY
-      board[board.empty_squares.sample] = marker
-
+      board[random_move] = marker
     else # otherwise use minimax algorythm
-      move_weights = {} # a hash of weights for each available move
-
-      # Populate the weights hash, recursing as needed
-      board.empty_squares.each do |move|
-        new_board_state = Board.new( board.squares_with(move, marker) )
-        move_weights.merge!( { move => minimax(new_board_state, marker) } )
-      end
-
-      # Choose and make the move with the best potential result (weight)
-      best_weight = move_weights.values.max
-      best_move = move_weights.key(best_weight)
-
-      board[best_move] = marker
+      board[smart_move] = marker
     end
   end
 
-  def move_weight(board)
-    if board.winning_marker == marker
+  def random_move
+    board.empty_squares.sample
+  end
+
+  def smart_move
+    weights = all_move_weights(board)
+    best_weight = weights.values.max
+    weights.key(best_weight)
+  end
+
+  def all_move_weights(board_state)
+    weights = {}
+    board_state.empty_squares.each do |move|
+      new_board_state = Board.new board_state.squares_with(move, marker)
+      weights.merge! move => minimax(new_board_state, marker)
+    end
+    weights
+  end
+
+  def move_weight(board_state)
+    if board_state.winning_marker == marker
       return 1
-    elsif board.someone_won? # not nil and not equal to computer marker
+    elsif board_state.someone_won? # not nil and not equal to computer marker
       return -1
     else
       return 0
     end
   end
 
-  def minimax(board, m)
+  def minimax(board_state, m)
     # If game is over because someone won or because the board is full
-    #   then stop weighing subsecuent moves and return the weight of the last move
-    return move_weight(board) if board.full? || board.someone_won?
+    # then stop weighing subsecuent moves and return the weight of the last move
+    if board_state.full? || board_state.someone_won?
+      return move_weight(board_state)
+    end
 
     # Cycle markers for each subsequent move
     next_move_marker = (TTT.markers - [m]).first
-    move_weights = {} # a hash of weights for each available move
 
-    # Populate the weights array, recursing as needed
-    board.empty_squares.each do |move|
-      new_board_state = Board.new( board.squares_with(move, next_move_marker) )
-      move_weights.merge!( { move => minimax(new_board_state, next_move_marker) } )
-    end
-
-    # Do the min or the max calculation
-    #   depending on whose move it is.
-    if next_move_marker == marker # It's computer's move
-        return move_weights.values.max
-    else
-        return move_weights.values.min
+    # Weight all possible subsecuent moves
+    move_weights = all_move_weights(board_state)
+    if next_move_marker == marker # It's computer's move. Choose the best one.
+      return move_weights.values.max
+    else # It's human's move. Choose the one that is worst for the computer.
+      return move_weights.values.min
     end
   end
 end
 
+# Creates, displays and tracks board state (markers in each square)
 class Board
   attr_accessor :squares
   SQUARE_NAMES = %w(a1 a2 a3 b1 b2 b3 c1 c2 c3)
-  WIN_LINES = %w(a1-a2-a3 b1-b2-b3 c1-c2-c3 a1-b1-c1 a2-b2-c2 a3-b3-c3 a1-b2-c3 c1-b2-a3)
+  WIN_LINES = %w(a1-a2-a3 b1-b2-b3 c1-c2-c3) + # rows
+              %w(a1-b1-c1 a2-b2-c2 a3-b3-c3) + # columns
+              %w(a1-b2-c3 c1-b2-a3) # diagonals
 
   def initialize(new_squares = {})
     if new_squares == {}
@@ -110,20 +123,30 @@ class Board
   end
 
   def empty_squares
-    squares.select { |_,v| v == TTT::EMPTY_MARKER }.keys
+    squares.select { |_, v| v == TTT::EMPTY_MARKER }.keys
   end
 
+  # rubocop:disable Metrics/AbcSize, MethodLength
   def to_s
-    str  = "\n"
-    str += "    | 1 | 2 | 3 |\n"
-    str += " ---+---+---+---+\n"
-    str += "  A | #{squares['a1']} | #{squares['a2']} | #{squares['a3']} |\n"
-    str += " ---+---+---+---+\n"
-    str += "  B | #{squares['b1']} | #{squares['b2']} | #{squares['b3']} |\n"
-    str += " ---+---+---+---+\n"
-    str += "  C | #{squares['c1']} | #{squares['c2']} | #{squares['c3']} |\n"
-    str += " ---+---+---+---+\n"
+    <<-STR
+
+       |   1   |   2   |   3   |
+    ---+-------+-------+-------+
+       |       |       |       |
+     A |   #{squares['a1']}   |   #{squares['a2']}   |   #{squares['a3']}   |
+       |       |       |       |
+    ---+-------+-------+-------+
+       |       |       |       |
+     B |   #{squares['b1']}   |   #{squares['b2']}   |   #{squares['b3']}   |
+       |       |       |       |
+    ---+-------+-------+-------+
+       |       |       |       |
+     C |   #{squares['c1']}   |   #{squares['c2']}   |   #{squares['c3']}   |
+       |       |       |       |
+    ---+-------+-------+-------+
+    STR
   end
+  # rubocop:enable Metrics/AbcSize, MethodLength
 
   def winning_marker
     WIN_LINES.each do |line|
@@ -135,7 +158,7 @@ class Board
   end
 
   def someone_won?
-    !!winning_marker
+    !winning_marker.nil?
   end
 
   def full?
@@ -143,28 +166,27 @@ class Board
   end
 
   def squares_with(square, marker)
-    squares.merge( {square => marker} )
+    squares.merge square => marker
   end
 
   def reset
     SQUARE_NAMES.each { |square| @squares[square] = TTT::EMPTY_MARKER }
   end
-
 end
 
-
+# Controls Tick Tack Toe game flow
 class TTT
   attr_accessor :player, :computer, :board, :current_marker
 
-  EMPTY_MARKER = ' '
-  HUMAN_MARKER = 'X'
-  COMPUTER_MARKER = 'O'
+  EMPTY_MARKER = '.'.light_black
+  HUMAN_MARKER = 'X'.green
+  COMPUTER_MARKER = 'O'.red
   FIRST_TO_MOVE = HUMAN_MARKER
 
   def initialize
-    @player = Player.new(HUMAN_MARKER)
-    @computer = Computer.new(COMPUTER_MARKER)
     @board = Board.new
+    @player = Human.new(HUMAN_MARKER, board)
+    @computer = Computer.new(COMPUTER_MARKER, board)
     @current_marker = FIRST_TO_MOVE
   end
 
@@ -174,10 +196,11 @@ class TTT
 
   def play
     welcome
-    begin
+    loop do
       play_one_game
       puts "\n=> Do you want to play again? (y/n)"
-    end while gets.chomp.downcase == "y"
+      break unless gets.chomp.downcase == 'y'
+    end
     goodbye
   end
 
@@ -203,6 +226,7 @@ class TTT
   end
 
   def reset
+    board.reset
     clear
     puts board
     @current_marker = FIRST_TO_MOVE
@@ -210,19 +234,20 @@ class TTT
 
   def play_one_game
     reset
-    begin
+    loop do
       current_player_moves
-    end until over?
+      break if over?
+    end
     puts result
   end
 
   def current_player_moves
     case current_marker
     when HUMAN_MARKER
-      player.move(board)
+      player.move
       @current_marker = COMPUTER_MARKER
     when COMPUTER_MARKER
-      computer.move(board)
+      computer.move
       @current_marker = HUMAN_MARKER
     end
     clear
@@ -231,22 +256,19 @@ class TTT
 
   def welcome
     clear
-    puts "\n" * 10
-    puts "Welcome to the TIC-TAC-TOE Game!".center(80).light_blue.bold
-    puts
-    puts "* * *".center(80)
-    puts
-    puts "(c) Anton Malkov".center(80).light_green
+    puts "\n" * 10 +
+      "Welcome to the TIC-TAC-TOE Game!\n".center(80).light_blue.bold +
+      "* * *\n".center(80) +
+      '(c) Anton Malkov'.center(80).light_green
     sleep 1
     clear
   end
 
   def goodbye
     clear
-    puts "\n" * 10
-    puts "Thanks for playing!".center(80).light_blue.bold
-    puts
-    puts "See you next time!".center(80).light_green
+    puts "\n" * 10 +
+      "Thanks for playing!\n".center(80).light_blue.bold +
+      "See you next time!\n".center(80).light_green
     sleep 1
     clear
   end
