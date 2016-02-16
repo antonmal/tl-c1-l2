@@ -115,10 +115,6 @@ class TTT
 
   private
 
-  def markers
-    [HUMAN_MARKER, COMPUTER_MARKER]
-  end
-
   def clear
     system('clear') || system('cls')
   end
@@ -246,7 +242,7 @@ class TTT
   end
 
   def the_other_marker(current_marker)
-    (markers - [current_marker]).first
+    ([HUMAN_MARKER, COMPUTER_MARKER] - [current_marker]).first
   end
 
   # rubocop:disable Metrics/AbcSize
