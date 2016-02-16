@@ -4,15 +4,6 @@ require 'colorize'
 # Tic-Tac-Toe OOP game for the Tealeaf Course C1-L2
 # (Anton Malkov)
 
-# Creates a player and specifies his marker
-class Player
-  attr_accessor :marker
-
-  def initialize(marker)
-    @marker = marker
-  end
-end
-
 # Creates, displays and tracks board state (markers in each square)
 class Board
   attr_accessor :squares
@@ -88,7 +79,7 @@ end
 
 # Controls Tick Tack Toe game flow
 class TTT
-  attr_accessor :player, :computer, :board, :current_marker
+  attr_accessor :human, :computer, :board, :current_marker
 
   EMPTY_MARKER = '.'.light_black
   HUMAN_MARKER = 'X'.green
@@ -98,8 +89,9 @@ class TTT
 
   def initialize
     @board = Board.new
-    @player = Player.new(HUMAN_MARKER)
-    @computer = Player.new(COMPUTER_MARKER)
+    player_struct = Struct.new :marker
+    @human = player_struct.new HUMAN_MARKER
+    @computer = player_struct.new COMPUTER_MARKER
     @current_marker = FIRST_TO_MOVE
   end
 
@@ -168,7 +160,7 @@ class TTT
     loop do
       the_move = gets.chomp.downcase
       if board.empty_squares.include? the_move
-        board[the_move] = player.marker
+        board[the_move] = human.marker
         break
       end
       ask_to_choose_an_empty_square
@@ -215,7 +207,7 @@ class TTT
   def move_weight(board_state)
     if board_state.winning_marker == computer.marker
       return 1
-    elsif board_state.winning_marker == player.marker
+    elsif board_state.winning_marker == human.marker
       return -1
     else
       return 0
