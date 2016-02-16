@@ -6,11 +6,12 @@ require 'colorize'
 
 # Creates a player attached to a particular board and using a specified marker
 class Player
-  attr_accessor :marker, :board
+  attr_accessor :marker, :board, :points
 
   def initialize(marker, board)
     @marker = marker
     @board = board
+    @points = 0
   end
 end
 
@@ -44,7 +45,7 @@ end
 # Creates a computer player and let's him choose a random move
 #   or smart move using the minimax algorythm
 class Computer < Player
-  DUMB_MOVE_PROBABILITY = 10
+  DUMB_MOVE_PROBABILITY = 100
 
   def move
     if rand(100) <= DUMB_MOVE_PROBABILITY
@@ -178,6 +179,10 @@ class Board
   end
   # rubocop:enable Metrics/AbcSize, MethodLength
 
+  def display
+    puts self
+  end
+
   def winning_marker
     WIN_LINES.each do |line|
       line_squares = squares.values_at(*line.split('-'))
@@ -207,15 +212,16 @@ end
 
 # Controls Tick Tack Toe game flow
 class TTT
-  attr_accessor :player, :computer, :board, :current_marker
+  attr_accessor :human, :computer, :board, :current_marker
 
   HUMAN_MARKER = 'X'.green
   COMPUTER_MARKER = 'O'.red
   FIRST_TO_MOVE = HUMAN_MARKER
+  MAX_POINTS = 5
 
   def initialize
     @board = Board.new
-    @player = Human.new(HUMAN_MARKER, board)
+    @human = Human.new(HUMAN_MARKER, board)
     @computer = Computer.new(COMPUTER_MARKER, board)
     @current_marker = FIRST_TO_MOVE
   end
@@ -228,6 +234,7 @@ class TTT
     welcome
     loop do
       play_one_game
+      break if game_over?
       puts "\n=> Do you want to play again? (y/n)"
       break unless gets.chomp.downcase == 'y'
     end
@@ -244,22 +251,61 @@ class TTT
     board.full? || board.someone_won?
   end
 
-  def result
+  def display_result
+    puts  case board.winning_marker
+          when HUMAN_MARKER
+            "\n *** YOU WON ***".green.bold
+          when COMPUTER_MARKER
+            "\n *** YOU LOST ***".red.bold
+          else
+            "\n *** IT'S A TIE ***".yellow.bold
+          end
+    puts "\nNow you have: #{human.points} points."
+    puts "And computer has: #{computer.points} points."
+    finish_game if game_over?
+  end
+
+  def game_over?
+    human_won? || computer_won?
+  end
+
+  def human_won?
+    human.points == MAX_POINTS
+  end
+
+  def computer_won?
+    computer.points == MAX_POINTS
+  end
+
+  def finish_game
+    if human_won?
+      puts "\nGAME OVER: Congratulations, YOU WON!!!".light_green.bold
+    elsif computer_won?
+      puts "\nGAME OVER: YOU LOST!!!".red.bold
+    end
+    sleep 3
+    goodbye
+  end
+
+  def count_points
     case board.winning_marker
     when HUMAN_MARKER
-      "\n *** YOU WON ***".green.bold
+      human.points += 1
     when COMPUTER_MARKER
-      "\n *** YOU LOST ***".red.bold
-    else
-      "\n *** IT'S A TIE ***".yellow.bold
+      computer.points += 1
     end
   end
 
   def reset
-    board.reset
     clear
-    puts board
+    board.reset
+    display_points
+    board.display
     @current_marker = FIRST_TO_MOVE
+  end
+
+  def display_points
+    puts "\n       You: #{human.points}  vs.  Computer: #{computer.points}\n"
   end
 
   def play_one_game
@@ -268,20 +314,22 @@ class TTT
       current_player_moves
       break if over?
     end
-    puts result
+    count_points
+    display_result
   end
 
   def current_player_moves
     case current_marker
     when HUMAN_MARKER
-      player.move
+      human.move
       @current_marker = COMPUTER_MARKER
     when COMPUTER_MARKER
       computer.move
       @current_marker = HUMAN_MARKER
     end
     clear
-    puts board
+    display_points
+    board.display
   end
 
   # rubocop:disable Metrics/AbcSize
