@@ -8,8 +8,8 @@ require 'colorize'
 class Player
   attr_accessor :marker
 
-  def initialize
-    @marker = "X"
+  def initialize(marker)
+    @marker = marker
   end
 
   def move(board)
@@ -17,36 +17,34 @@ class Player
     puts "   (type row letter followed by the column number (like 'B2')"
     loop do
       the_move = gets.chomp.downcase
-      if board.empty_cells.include? the_move
-        board.hash[the_move] = self.marker
+      if board.empty_squares.include? the_move
+        board[the_move] = marker
         break
       end
       puts "\n=> Please, choose one of the following options:"
-      puts board.empty_cells.join(", ")
+      puts board.empty_squares.join(", ")
     end
   end
 end
 
 class Computer
   attr_accessor :marker
+  DUMB_MOVE_PROBABILITY = 10
 
-  def initialize
-    @marker = "O"
+  def initialize(marker)
+    @marker = marker
   end
 
   def move(board)
-    if rand(100) > 90 # in 10% of cases use 'dumb' random logic
-      # Simple random empty cell logic
-      board.hash[board.empty_cells.sample] = marker
+    if rand(100) <= DUMB_MOVE_PROBABILITY
+      board[board.empty_squares.sample] = marker
 
-    else # in 90% of cases use minimax AI
-
-      # More complex AI logic (Minimax algorythm)
+    else # otherwise use minimax algorythm
       move_weights = {} # a hash of weights for each available move
 
       # Populate the weights hash, recursing as needed
-      board.empty_cells.each do |move|
-        new_board_state = Board.new( board.hash_with(move, marker) )
+      board.empty_squares.each do |move|
+        new_board_state = Board.new( board.squares_with(move, marker) )
         move_weights.merge!( { move => minimax(new_board_state, marker) } )
       end
 
@@ -54,14 +52,14 @@ class Computer
       best_weight = move_weights.values.max
       best_move = move_weights.key(best_weight)
 
-      board.hash[best_move] = marker
+      board[best_move] = marker
     end
   end
 
   def move_weight(board)
-    if board.has_line? == marker
+    if board.winning_marker == marker
       return 1
-    elsif board.has_line? # not nil and not equal to computer marker
+    elsif board.someone_won? # not nil and not equal to computer marker
       return -1
     else
       return 0
@@ -71,15 +69,15 @@ class Computer
   def minimax(board, m)
     # If game is over because someone won or because the board is full
     #   then stop weighing subsecuent moves and return the weight of the last move
-    return move_weight(board) if board.full? || board.has_line?
+    return move_weight(board) if board.full? || board.someone_won?
 
-    # Cycle markers for each subsecuent move
-    next_move_marker = (["X", "O"] - [m]).first
+    # Cycle markers for each subsequent move
+    next_move_marker = (TTT.markers - [m]).first
     move_weights = {} # a hash of weights for each available move
 
     # Populate the weights array, recursing as needed
-    board.empty_cells.each do |move|
-      new_board_state = Board.new( board.hash_with(move, next_move_marker) )
+    board.empty_squares.each do |move|
+      new_board_state = Board.new( board.squares_with(move, next_move_marker) )
       move_weights.merge!( { move => minimax(new_board_state, next_move_marker) } )
     end
 
@@ -94,123 +92,164 @@ class Computer
 end
 
 class Board
-  attr_accessor :hash
-  CELLS = %w(a1 a2 a3 b1 b2 b3 c1 c2 c3)
+  attr_accessor :squares
+  SQUARE_NAMES = %w(a1 a2 a3 b1 b2 b3 c1 c2 c3)
   WIN_LINES = %w(a1-a2-a3 b1-b2-b3 c1-c2-c3 a1-b1-c1 a2-b2-c2 a3-b3-c3 a1-b2-c3 c1-b2-a3)
 
-  def initialize(new_hash = {})
-    if new_hash == {}
-      @hash = {}
-      CELLS.each {|cell| @hash[cell] = " "}
+  def initialize(new_squares = {})
+    if new_squares == {}
+      @squares = {}
+      reset
     else
-      @hash = new_hash
+      @squares = new_squares
     end
   end
 
-  def empty_cells
-    hash.select {|_,v| v == " "}.keys
+  def []=(square, marker)
+    @squares[square] = marker
+  end
+
+  def empty_squares
+    squares.select { |_,v| v == TTT::EMPTY_MARKER }.keys
   end
 
   def to_s
     str  = "\n"
     str += "    | 1 | 2 | 3 |\n"
     str += " ---+---+---+---+\n"
-    str += "  A | #{hash['a1']} | #{hash['a2']} | #{hash['a3']} |\n"
+    str += "  A | #{squares['a1']} | #{squares['a2']} | #{squares['a3']} |\n"
     str += " ---+---+---+---+\n"
-    str += "  B | #{hash['b1']} | #{hash['b2']} | #{hash['b3']} |\n"
+    str += "  B | #{squares['b1']} | #{squares['b2']} | #{squares['b3']} |\n"
     str += " ---+---+---+---+\n"
-    str += "  C | #{hash['c1']} | #{hash['c2']} | #{hash['c3']} |\n"
+    str += "  C | #{squares['c1']} | #{squares['c2']} | #{squares['c3']} |\n"
     str += " ---+---+---+---+\n"
   end
 
-  def has_line?
+  def winning_marker
     WIN_LINES.each do |line|
-      ["X", "O"].each do |marker|
-        return marker if line.split('-').all? {|cell| hash[cell] == marker}
-      end
+      line_values = squares.values_at(*line.split('-'))
+      next if line_values[0] == TTT::EMPTY_MARKER
+      return line_values[0] if line_values.all? { |v| v == line_values[0] }
     end
     nil
   end
 
-  def full?
-    empty_cells.empty?
+  def someone_won?
+    !!winning_marker
   end
 
-  def hash_with(cell, marker)
-    hash.merge( {cell => marker} )
+  def full?
+    empty_squares.empty?
+  end
+
+  def squares_with(square, marker)
+    squares.merge( {square => marker} )
+  end
+
+  def reset
+    SQUARE_NAMES.each { |square| @squares[square] = TTT::EMPTY_MARKER }
   end
 
 end
 
 
 class TTT
-  attr_accessor :player, :computer, :board
+  attr_accessor :player, :computer, :board, :current_marker
+
+  EMPTY_MARKER = ' '
+  HUMAN_MARKER = 'X'
+  COMPUTER_MARKER = 'O'
+  FIRST_TO_MOVE = HUMAN_MARKER
 
   def initialize
-    @player = Player.new
-    @computer = Computer.new
+    @player = Player.new(HUMAN_MARKER)
+    @computer = Computer.new(COMPUTER_MARKER)
     @board = Board.new
+    @current_marker = FIRST_TO_MOVE
   end
 
-  def self.clear
+  def self.markers
+    [HUMAN_MARKER, COMPUTER_MARKER]
+  end
+
+  def play
+    welcome
+    begin
+      play_one_game
+      puts "\n=> Do you want to play again? (y/n)"
+    end while gets.chomp.downcase == "y"
+    goodbye
+  end
+
+  private
+
+  def clear
     system('clear') || system('cls')
   end
 
   def over?
-    board.full? || board.has_line?
+    board.full? || board.someone_won?
   end
 
   def result
-    case board.has_line?
-    when "X"
-      " *** YOU WIN ***".green.bold
-    when "O"
-      " *** YOU LOSE ***".red.bold
+    case board.winning_marker
+    when HUMAN_MARKER
+      "\n *** YOU WON ***".green.bold
+    when COMPUTER_MARKER
+      "\n *** YOU LOST ***".red.bold
     else
-      " *** IT'S A TIE ***".yellow.bold
+      "\n *** IT'S A TIE ***".yellow.bold
     end
   end
 
-  def play
-    TTT.clear
+  def reset
+    clear
     puts board
+    @current_marker = FIRST_TO_MOVE
+  end
+
+  def play_one_game
+    reset
     begin
-      player.move(board)
-      TTT.clear
-      puts board
-      computer.move(board) unless over?
-      TTT.clear
-      puts board
+      current_player_moves
     end until over?
-    puts
     puts result
+  end
+
+  def current_player_moves
+    case current_marker
+    when HUMAN_MARKER
+      player.move(board)
+      @current_marker = COMPUTER_MARKER
+    when COMPUTER_MARKER
+      computer.move(board)
+      @current_marker = HUMAN_MARKER
+    end
+    clear
+    puts board
+  end
+
+  def welcome
+    clear
+    puts "\n" * 10
+    puts "Welcome to the TIC-TAC-TOE Game!".center(80).light_blue.bold
+    puts
+    puts "* * *".center(80)
+    puts
+    puts "(c) Anton Malkov".center(80).light_green
+    sleep 1
+    clear
+  end
+
+  def goodbye
+    clear
+    puts "\n" * 10
+    puts "Thanks for playing!".center(80).light_blue.bold
+    puts
+    puts "See you next time!".center(80).light_green
+    sleep 1
+    clear
   end
 end
 
-# Welcome
-TTT.clear
-puts "\n" * 10
-puts "Welcome to the TIC-TAC-TOE Game!".center(80).light_blue.bold
-puts
-puts "* * *".center(80)
-puts
-puts "(c) Anton Malkov".center(80).light_green
-sleep 2
-
-# Main game loop
-begin
-  TTT.new.play
-  puts
-  puts "=> Do you want to play again? (y/n)"
-end while gets.chomp.downcase == "y"
-
-# Bye-bye
-TTT.clear
-puts "\n" * 10
-puts "Thanks for playing!".center(80).light_blue.bold
-puts
-puts "See you next time!".center(80).light_green
-sleep 2
-TTT.clear
-
-
+TTT.new.play
