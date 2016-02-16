@@ -110,6 +110,7 @@ class Computer < Player
   end
 end
 
+# Takes care of the state of on square of a board
 class Square
   attr_accessor :marker
 
@@ -234,7 +235,8 @@ class TTT
     welcome
     loop do
       play_one_game
-      break if game_over?
+      binding.pry
+      finish_game && break if game_over?
       puts "\n=> Do you want to play again? (y/n)"
       break unless gets.chomp.downcase == 'y'
     end
@@ -262,7 +264,6 @@ class TTT
           end
     puts "\nNow you have: #{human.points} points."
     puts "And computer has: #{computer.points} points."
-    finish_game if game_over?
   end
 
   def game_over?
