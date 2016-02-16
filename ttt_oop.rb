@@ -57,16 +57,16 @@ class Computer < Player
   end
 
   def smart_move
-    weights = all_move_weights(board)
+    weights = all_move_weights(board, marker)
     best_weight = weights.values.max
     weights.key(best_weight)
   end
 
-  def all_move_weights(board_state)
+  def all_move_weights(board_state, next_marker)
     weights = {}
     board_state.empty_squares.each do |move|
-      new_board_state = Board.new board_state.squares_with(move, marker)
-      weights.merge! move => minimax(new_board_state, marker)
+      new_board_state = Board.new board_state.squares_with(move, next_marker)
+      weights.merge! move => minimax(new_board_state, next_marker)
     end
     weights
   end
@@ -81,7 +81,7 @@ class Computer < Player
     end
   end
 
-  def minimax(board_state, m)
+  def minimax(board_state, current_marker)
     # If game is over because someone won or because the board is full
     # then stop weighing subsecuent moves and return the weight of the last move
     if board_state.full? || board_state.someone_won?
@@ -89,10 +89,10 @@ class Computer < Player
     end
 
     # Cycle markers for each subsequent move
-    next_move_marker = (TTT.markers - [m]).first
+    next_move_marker = (TTT.markers - [current_marker]).first
 
     # Weight all possible subsecuent moves
-    move_weights = all_move_weights(board_state)
+    move_weights = all_move_weights(board_state, next_move_marker)
     if next_move_marker == marker # It's computer's move. Choose the best one.
       return move_weights.values.max
     else # It's human's move. Choose the one that is worst for the computer.
@@ -254,21 +254,23 @@ class TTT
     puts board
   end
 
+  # rubocop:disable Metrics/AbcSize
   def welcome
     clear
     puts "\n" * 10 +
-      "Welcome to the TIC-TAC-TOE Game!\n".center(80).light_blue.bold +
-      "* * *\n".center(80) +
+      'Welcome to the TIC-TAC-TOE Game!'.center(80).light_blue.bold + "\n\n" +
+      '* * *'.center(80) + "\n\n" +
       '(c) Anton Malkov'.center(80).light_green
     sleep 1
     clear
   end
+  # rubocop:enable Metrics/AbcSize
 
   def goodbye
     clear
     puts "\n" * 10 +
-      "Thanks for playing!\n".center(80).light_blue.bold +
-      "See you next time!\n".center(80).light_green
+      'Thanks for playing!'.center(80).light_blue.bold + "\n\n" +
+      'See you next time!'.center(80).light_green
     sleep 1
     clear
   end
