@@ -28,6 +28,8 @@ class Human < Player
     end
   end
 
+  private
+
   def prompt_for_move
     puts "\n=> Where do you want to move?"
     puts "   (type row letter followed by the column number (like 'B2')"
@@ -52,6 +54,8 @@ class Computer < Player
     end
   end
 
+  private
+
   def random_move
     board.empty_squares.sample
   end
@@ -59,7 +63,7 @@ class Computer < Player
   def smart_move
     weights = all_move_weights(board, marker)
     best_weight = weights.values.max
-    weights.key(best_weight)
+    weights.select { |_, v| v == best_weight }.keys.sample
   end
 
   def all_move_weights(board_state, next_marker)
