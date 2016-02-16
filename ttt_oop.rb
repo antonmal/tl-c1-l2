@@ -14,7 +14,7 @@ class Player
   end
 end
 
-# Creates a human player and let's him choose moves in command line
+# Creates a human player and let's him choose moves via command line
 class Human < Player
   def move
     prompt_for_move
@@ -89,7 +89,7 @@ class Computer < Player
     end
 
     # Cycle markers for each subsequent move
-    next_move_marker = (TTT.markers - [current_marker]).first
+    next_move_marker = the_other_marker(current_marker)
 
     # Weight all possible subsecuent moves
     move_weights = all_move_weights(board_state, next_move_marker)
@@ -98,6 +98,10 @@ class Computer < Player
     else # It's human's move. Choose the one that is worst for the computer.
       return move_weights.values.min
     end
+  end
+
+  def the_other_marker(current_marker)
+    (TTT.markers - [current_marker]).first
   end
 end
 
