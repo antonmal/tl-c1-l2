@@ -8,7 +8,7 @@ require 'colorize'
 class Player
   attr_accessor :marker, :board, :points
 
-  def initialize(marker, board)
+  def initialize(board, marker = '?')
     @marker = marker
     @board = board
     @points = 0
@@ -215,122 +215,180 @@ end
 class TTT
   attr_accessor :human, :computer, :board, :current_marker
 
-  HUMAN_MARKER = 'X'.green
-  COMPUTER_MARKER = 'O'.red
-  FIRST_TO_MOVE = HUMAN_MARKER
   MAX_POINTS = 5
+  # must be either 'human' or 'computer' instance variable names
+  FIRST_TO_MOVE = 'human'
 
   def initialize
     @board = Board.new
-    @human = Human.new(HUMAN_MARKER, board)
-    @computer = Computer.new(COMPUTER_MARKER, board)
-    @current_marker = FIRST_TO_MOVE
+    @human = Human.new(board)
+    @computer = Computer.new(board)
   end
 
   def self.markers
-    [HUMAN_MARKER, COMPUTER_MARKER]
+    [human.marker, computer.marker]
   end
 
   def play
     welcome
+    choose_markers
     loop do
-      play_one_game
-      binding.pry
-      finish_game && break if game_over?
+      play_one_round
+      finish_game if game_over?
       puts "\n=> Do you want to play again? (y/n)"
       break unless gets.chomp.downcase == 'y'
     end
-    goodbye
+    finish_game
   end
 
   private
 
-  def clear
-    system('clear') || system('cls')
+  # MARKERS:
+
+  def choose_markers
+    choose_human_marker
+    choose_computer_marker
+    reset_current_marker
   end
 
-  def over?
+  def choose_human_marker
+    marker = ''
+    loop do
+      prompt_for_marker
+      marker = gets.chomp.upcase[0]
+      break if visible?(marker) && marker != Square::EMPTY_MARKER.uncolorize
+    end
+    human.marker = marker.green
+  end
+
+  def prompt_for_marker
+    puts "\nWhich marker would you like to use?"
+    if visible?(Square::EMPTY_MARKER)
+      puts '(Choose any visible character ' \
+           "except for '#{Square::EMPTY_MARKER.uncolorize}')\n\n"
+    else
+      puts "(Choose any visible character)\n\n"
+    end
+    print '>> '
+  end
+
+  def visible?(char)
+    char =~ /\A\S/
+  end
+
+  def choose_computer_marker
+    computer.marker = (['O', 'X', '*'] - taken_markers).first.red
+  end
+
+  def taken_markers
+    [human.marker.uncolorize, Square::EMPTY_MARKER.uncolorize]
+  end
+
+  def reset_current_marker
+    @current_marker = instance_variable_get('@' + FIRST_TO_MOVE).marker
+  end
+
+  # GAME FLOW:
+
+  def play_one_round
+    reset
+    loop do
+      current_player_moves
+      break if round_over?
+    end
+    count_points
+    display_round_result
+  end
+
+  def current_player_moves
+    case current_marker
+    when human.marker
+      human.move
+      @current_marker = computer.marker
+    when computer.marker
+      computer.move
+      @current_marker = human.marker
+    end
+    display_board
+  end
+
+  def round_over?
     board.full? || board.someone_won?
   end
 
-  def display_result
-    puts  case board.winning_marker
-          when HUMAN_MARKER
-            "\n *** YOU WON ***".green.bold
-          when COMPUTER_MARKER
-            "\n *** YOU LOST ***".red.bold
-          else
-            "\n *** IT'S A TIE ***".yellow.bold
-          end
-    puts "\nNow you have: #{human.points} points."
-    puts "And computer has: #{computer.points} points."
+  def human_won_round?
+    board.winning_marker == human.marker
+  end
+
+  def computer_won_round?
+    board.winning_marker == computer.marker
   end
 
   def game_over?
-    human_won? || computer_won?
+    human_won_game? || computer_won_game?
   end
 
-  def human_won?
+  def human_won_game?
     human.points == MAX_POINTS
   end
 
-  def computer_won?
+  def computer_won_game?
     computer.points == MAX_POINTS
   end
 
-  def finish_game
-    if human_won?
-      puts "\nGAME OVER: Congratulations, YOU WON!!!".light_green.bold
-    elsif computer_won?
-      puts "\nGAME OVER: YOU LOST!!!".red.bold
-    end
-    sleep 3
-    goodbye
-  end
-
   def count_points
-    case board.winning_marker
-    when HUMAN_MARKER
-      human.points += 1
-    when COMPUTER_MARKER
-      computer.points += 1
-    end
+    human.points += 1 if human_won_round?
+    computer.points += 1 if computer_won_round?
   end
 
   def reset
-    clear
     board.reset
+    display_board
+    reset_current_marker
+  end
+
+  def finish_game
+    display_game_result
+    goodbye
+    exit
+  end
+
+  # DISPLAY:
+
+  def display_board
+    clear
     display_points
     board.display
-    @current_marker = FIRST_TO_MOVE
+  end
+
+  def clear
+    system('clear') || system('cls')
   end
 
   def display_points
     puts "\n       You: #{human.points}  vs.  Computer: #{computer.points}\n"
   end
 
-  def play_one_game
-    reset
-    loop do
-      current_player_moves
-      break if over?
-    end
-    count_points
-    display_result
+  def display_round_result
+    puts case board.winning_marker
+         when human.marker
+           "\n *** YOU WON ***".green.bold
+         when computer.marker
+           "\n *** YOU LOST ***".red.bold
+         else
+           "\n *** IT'S A TIE ***".yellow.bold
+         end
+    display_points
   end
 
-  def current_player_moves
-    case current_marker
-    when HUMAN_MARKER
-      human.move
-      @current_marker = COMPUTER_MARKER
-    when COMPUTER_MARKER
-      computer.move
-      @current_marker = HUMAN_MARKER
+  def display_game_result
+    if human_won_game?
+      puts "\nGAME OVER: Congratulations, YOU WON!!!".light_green.bold
+      sleep 3
+    elsif computer_won_game?
+      puts "\nGAME OVER: YOU LOST!!!".red.bold
+      sleep 3
     end
-    clear
-    display_points
-    board.display
   end
 
   # rubocop:disable Metrics/AbcSize
