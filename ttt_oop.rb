@@ -6,7 +6,7 @@ require 'colorize'
 
 # Creates a player attached to a particular board and using a specified marker
 class Player
-  attr_accessor :marker, :board, :points
+  attr_accessor :marker, :board, :points, :name
 
   def initialize(board, marker = '?')
     @marker = marker
@@ -32,20 +32,23 @@ class Human < Player
   private
 
   def prompt_for_move
-    puts "\n=> Where do you want to move?"
-    puts "   (type row letter followed by the column number (like 'B2')"
+    puts "\nWhere do you want to move?"
+    puts "(type row letter followed by the column number (like 'B2')\n\n"
+    print '>> '
   end
 
   def ask_to_choose_an_empty_square
-    puts "\n=> Please, choose one of the following options:"
+    puts "\nPlease, choose one of the following options:"
     puts board.empty_squares.join(', ')
+    puts
+    print '>> '
   end
 end
 
 # Creates a computer player and let's him choose a random move
 #   or smart move using the minimax algorythm
 class Computer < Player
-  DUMB_MOVE_PROBABILITY = 100
+  DUMB_MOVE_PROBABILITY = 10
 
   def move
     if rand(100) <= DUMB_MOVE_PROBABILITY
@@ -231,17 +234,47 @@ class TTT
 
   def play
     welcome
-    choose_markers
+    choose_names_and_markers
     loop do
       play_one_round
       finish_game if game_over?
-      puts "\n=> Do you want to play again? (y/n)"
+      puts "\n=> Do you want to play again? (y/n)\n\n"
+      print '>> '
       break unless gets.chomp.downcase == 'y'
     end
     finish_game
   end
 
   private
+
+  # NAMES:
+
+  def choose_names_and_markers
+    choose_player_names
+    choose_markers
+  end
+
+  def choose_player_names
+    choose_human_name
+    choose_computer_name
+  end
+
+  def choose_human_name
+    name = ''
+    loop do
+      puts "What is your name?\n\n"
+      print '>> '
+      name = gets.chomp.capitalize
+      break if name =~ /\S/
+      puts 'Pardon?'
+    end
+    human.name = name
+  end
+
+  def choose_computer_name
+    available_names = ['R2D2', 'Wall-E', 'T-800'] - [human.name]
+    computer.name = available_names.sample
+  end
 
   # MARKERS:
 
@@ -277,11 +310,9 @@ class TTT
   end
 
   def choose_computer_marker
-    computer.marker = (['O', 'X', '*'] - taken_markers).first.red
-  end
-
-  def taken_markers
-    [human.marker.uncolorize, Square::EMPTY_MARKER.uncolorize]
+    taken_markers = [human.marker.uncolorize, Square::EMPTY_MARKER.uncolorize]
+    available_markers = ['O', 'X', '*'] - taken_markers
+    computer.marker = available_markers.first.red
   end
 
   def reset_current_marker
@@ -366,27 +397,31 @@ class TTT
   end
 
   def display_points
-    puts "\n       You: #{human.points}  vs.  Computer: #{computer.points}\n"
+    puts "\n #{human.name}: #{human.points}  vs.  " \
+         "#{computer.name}: #{computer.points}\n"
   end
 
   def display_round_result
-    puts case board.winning_marker
-         when human.marker
-           "\n *** YOU WON ***".green.bold
-         when computer.marker
-           "\n *** YOU LOST ***".red.bold
-         else
-           "\n *** IT'S A TIE ***".yellow.bold
-         end
+    display_round_message
     display_points
+  end
+
+  def display_round_message
+    if human_won_round?
+      puts "\n *** #{human.name} WON ***".green
+    elsif computer_won_round?
+      puts "\n *** #{human.name} LOST ***".red
+    else
+      puts "\n *** IT'S A TIE ***".yellow
+    end
   end
 
   def display_game_result
     if human_won_game?
-      puts "\nGAME OVER: Congratulations, YOU WON!!!".light_green.bold
+      puts "\nGAME OVER: Congratulations, #{human.name} WON!!!".light_green.bold
       sleep 3
     elsif computer_won_game?
-      puts "\nGAME OVER: YOU LOST!!!".red.bold
+      puts "\nGAME OVER: Sorry, #{human.name} LOST!!!".red.bold
       sleep 3
     end
   end
@@ -406,9 +441,9 @@ class TTT
   def goodbye
     clear
     puts "\n" * 10 +
-      'Thanks for playing!'.center(80).light_blue.bold + "\n\n" +
+      "Thanks for playing, #{human.name}!".center(80).light_blue.bold + "\n\n" +
       'See you next time!'.center(80).light_green
-    sleep 1
+    sleep 2
     clear
   end
 end
