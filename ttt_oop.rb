@@ -39,7 +39,7 @@ class Human < Player
 
   def ask_to_choose_an_empty_square
     puts "\nPlease, choose one of the following options:"
-    puts board.empty_squares.join(', ')
+    puts board.empty_squares.join_or
     puts
     print '>> '
   end
@@ -48,6 +48,8 @@ end
 # Creates a computer player and let's him choose a random move
 #   or smart move using the minimax algorythm
 class Computer < Player
+  attr_accessor :opponent_marker
+
   DUMB_MOVE_PROBABILITY = 10
 
   def move
@@ -109,7 +111,7 @@ class Computer < Player
   end
 
   def the_other_marker(current_marker)
-    (TTT.markers - [current_marker]).first
+    ([marker, opponent_marker] - [current_marker]).first
   end
 end
 
@@ -228,10 +230,6 @@ class TTT
     @computer = Computer.new(board)
   end
 
-  def self.markers
-    [human.marker, computer.marker]
-  end
-
   def play
     welcome
     choose_names_and_markers
@@ -313,6 +311,7 @@ class TTT
     taken_markers = [human.marker.uncolorize, Square::EMPTY_MARKER.uncolorize]
     available_markers = ['O', 'X', '*'] - taken_markers
     computer.marker = available_markers.first.red
+    computer.opponent_marker = human.marker
   end
 
   def reset_current_marker
@@ -445,6 +444,13 @@ class TTT
       'See you next time!'.center(80).light_green
     sleep 2
     clear
+  end
+end
+
+class Array
+  def join_or(delimiter = ', ', last_delimiter = 'or')
+    return self[0] if self.size < 2
+    self[0..-2].join(delimiter) + ' ' + last_delimiter + ' ' + self[-1].to_s
   end
 end
 
