@@ -448,9 +448,9 @@ class TTT
 end
 
 class Array
-  def join_or(delimiter = ', ', last_delimiter = 'or')
-    return self[0] if self.size < 2
-    self[0..-2].join(delimiter) + ' ' + last_delimiter + ' ' + self[-1].to_s
+  def join_or(delimiter = ', ', word = 'or')
+    return self[0] unless self.size > 1
+    self[0..-2].join(delimiter) + " #{word} #{self[-1]}"
   end
 end
 
